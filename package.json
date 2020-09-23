@@ -1,0 +1,14 @@
+{
+  "name": "sss-tool",
+  "version": "0.1.0",
+  "description": "Tool to interact with Gershman's SSS",
+  "main": "index.js",
+  "author": "voidstarr",
+  "license": "MIT",
+  "dependencies": {
+    "argparse": "^2.0.1",
+    "got": "^11.7.0",
+    "jsdom": "^16.4.0",
+    "query-string": "^6.13.2"
+  }
+}
