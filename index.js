@@ -82,7 +82,7 @@ if (args.term !== undefined) {
 } else if (configOnDisk.term !== undefined && configOnDisk.term !== '') {
     config.term = configOnDisk.term;
 } else {
-    config.term = 'cal_poly_pomona';
+    config.term = '2020_fall';
 }
 
 if(process.env.SSS_DEBUG) {
