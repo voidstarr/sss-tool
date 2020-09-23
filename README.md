@@ -1,6 +1,6 @@
 # SSS Tool
 
-```bash
+```
 usage: index.js [-h] [-f CONFIG_FILE] [-w]
                 {login,assignment,status,password} ...
 
@@ -19,7 +19,7 @@ optional arguments:
 ```
 
 ## login
-```bash
+```
 usage: index.js login [-h] [-u USERNAME] [-p PASSWORD] [-e SESSION] [-o SCHOOL]
                       [-t TERM] [-c COURSE]
 
@@ -42,7 +42,7 @@ optional arguments:
 ```
 
 ## assignment -- TODO
-```bash
+```
 usage: index.js assignment [-h] [-l | -s SUBMIT]
 
 positional arguments:
@@ -56,7 +56,7 @@ optional arguments:
 ```
 
 ## status -- TODO
-```bash
+```
 usage: index.js status [-h]
 
 positional arguments:
@@ -67,7 +67,7 @@ optional arguments:
 ```
 
 ## password -- TODO
-```bash
+```
 usage: index.js password [-h] oldPassword newPassword
 
 positional arguments:
