@@ -5,7 +5,7 @@ const os = require('os');
 const fs = require('fs');
 const got = require('got');
 const jsdom = require('jsdom');
-const queryString = require('query-string');
+const { URLSearchParams } = require('url');
 const { JSDOM } = jsdom;
 
 const BASE_URL = "https://www.dagertech.net/cgi-bin/cgiwrap/gershman/sss/index.cgi";
@@ -117,15 +117,8 @@ if (args.login !== undefined) {
     changePassword();
 }
 
-if (args.writeFile) {
-    fs.promises.writeFile(configFile, JSON.stringify(config, null, 4)).then(r => {
-        process.exit(0);
-    });
-} else {
-    fs.promises.writeFile(configFile, JSON.stringify(configOnDisk, null, 4)).then(r => {
-        process.exit(0);
-    });
-}
+
+
 
 function hasValidSession(retryAttempts) {
     var valid = false;
@@ -153,7 +146,7 @@ function login() {
     } else if (configOnDisk.username !== undefined && configOnDisk.username !== '') {
         config.username = configOnDisk.username;
     } else {
-        console.error('You must supply your username AND password in the progarm arguments, or a configuration file.')
+        console.log('You must supply your username AND password in the progarm arguments, or a configuration file.')
         process.exit(-1);
     }
 
@@ -162,18 +155,21 @@ function login() {
     } else if (configOnDisk.password !== undefined && configOnDisk.password !== '') {
         config.password = configOnDisk.password;
     } else {
-        console.error('You must supply your username AND password in the progarm arguments, or a configuration file.');
+        console.log('You must supply your username AND password in the progarm arguments, or a configuration file.');
         process.exit(-1);
     }
 
-    var bodyParams = searchParams;
-    bodyParams.authstring = `${config.username}/${config.password}`;
-    bodyParams.ssscmd = 'login';
+    var bodyParams = new URLSearchParams(searchParams);
+    bodyParams.append('authstring', `${config.username}/${config.password}`);
+    bodyParams.append('ssscmd', 'login');
+
+    if(process.env.SSS_DEBUG)
+        console.log('login: post body', bodyParams.toString())
 
     got.post(`${BASE_URL}` , {
         resolveBodyOnly: true,
         searchParams,
-        body: queryString.stringify(bodyParams),
+        body: bodyParams.toString(),
         https: {
             responseType: 'text',
             rejectUnauthorized: false
@@ -185,13 +181,15 @@ function login() {
         if(process.env.SSS_DEBUG)
             console.log('login: invalidUserPass', loginErrorMessage);
 
-        if(loginErrorMessage !== null && loginErrorMessage.textContent.indexOf('Invalid Username or') !== -1) {
-            console.error('Invalid Username or Password');
+        if(loginErrorMessage !== null && loginErrorMessage.textContent === '') {
+            console.log('Invalid Username or Password');
             process.exit(-1);
-        }
+        } 
         config.session_id = configOnDisk.session_id = dom.window.document.getElementById("sss_option_status").firstChild.href.split('session_id=')[1];
+
+        fs.writeFileSync(configFile, JSON.stringify(args.writeFile ? config : configOnDisk, null, 4));
     }).catch(err => {
-        console.error(err);
+        console.log(err);
     });
 }
 
