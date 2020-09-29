@@ -99,39 +99,58 @@ var searchParams = {
 
 if (args.login !== undefined) {
     login();
-} else if(args.assignment !== undefined) {
-    if(!hasValidSession(3)) {
-        console.log('Invalid session. You must login again.');
+} else {
+    hasValidSession().then(((statusPage) => {
+        if(args.status !== undefined) {
+            showStatus(statusPage);
+        } else if(args.assignment !== undefined) {
+            if (args.list) {
+                listAssignments();
+            } else if (args.submit !== undefined) {
+                submitAssignment();
+            }
+        } else if (args.password !== undefined) {
+            changePassword();
+        }
+    })).catch((err) => {
+        console.log('Invalid session. You must login again.\n', err);
         process.exit(-1);
-    }
-    if (args.list) {
-        listAssignments();
-    } else if (args.submit !== undefined) {
-        submitAssignment();
-    }
-} else if (args.password !== undefined) {
-    if(!hasValidSession(3)) {
-        console.log('Invalid session. You must login again.');
-        process.exit(-1);
-    }
-    changePassword();
+    });
 }
 
-
-
-
-function hasValidSession(retryAttempts) {
-    var valid = false;
+function hasValidSession() {
     if(args.session_id !== undefined) {
-
-    } else if (config.session_id !== undefined && config.session_id !== '') {
-
+        config.session_id = args.session_id;
+    } else if (configOnDisk.session_id !== undefined && configOnDisk.session_id !== '') {
+        config.session_id = configOnDisk.session_id;
     }
-    // get status page w/ session_id
-    // if #sss_login_errmsg contains "Session has expired. Please login again." return false
-    // if #sss_status_user contains username return true
-    // otherwise, return false
-    return valid;
+    searchParams.session_id = config.session_id;
+    searchParams.ssscmd = 'status';
+
+    return new Promise((resolve, reject) => {
+        got.get(`${BASE_URL}` , {
+            resolveBodyOnly: true,
+            searchParams,
+            https: {
+                responseType: 'text',
+                rejectUnauthorized: false
+            }
+        }).then(r => {
+            const dom = new JSDOM(r);
+            var statusPageLink = dom.window.document.getElementById("sss_option_status");
+            var loginErrorMessage = dom.window.document.getElementById('sss_login_errmsg');
+
+            if (statusPageLink !== null && statusPageLink.firstChild.href.split('session_id=')[1] === config.session_id) {
+                resolve(dom);
+            } else if (loginErrorMessage !== null && loginErrorMessage.textContent.contains('Session has expired.')) {
+                reject('Session has expired.');
+            } else {
+                reject('dunno');
+            }
+        }).catch(err => {
+            reject(err);
+        });
+    });
 }
 
 // POST `BASE_URL`app=teaching&goto=sss&school=cal_poly_pomona&course=CS_2600&term=2020_fall
@@ -181,7 +200,7 @@ function login() {
         if(process.env.SSS_DEBUG)
             console.log('login: invalidUserPass', loginErrorMessage);
 
-        if(loginErrorMessage !== null && loginErrorMessage.textContent === '') {
+        if(loginErrorMessage !== null && loginErrorMessage.textContent !== '') {
             console.log('Invalid Username or Password');
             process.exit(-1);
         } 
@@ -196,8 +215,25 @@ function login() {
 // GET https://www.dagertech.net/cgi-bin/cgiwrap/gershman/sss/index.cgi?app=teaching&goto=sss&school=cal_poly_pomona&course=CS_2600&term=2020_fall&ssscmd=submit&session_id=%sessionID
 //
 // list of assignments available to submit: //*[@id="sss_submit_assignment_number"]
-function listAssignments() { 
+function listAssignments() {
+    searchParams.ssscmd = 'submit';
 
+    got.get(`${BASE_URL}` , {
+        resolveBodyOnly: true,
+        searchParams,
+        https: {
+            responseType: 'text',
+            rejectUnauthorized: false
+        }
+    }).then(r => {
+        const dom = new JSDOM(r);
+        var assignmentList = dom.window.document.getElementById("sss_submit_assignment_number");
+        console.log(assignmentList);
+        // TODO
+        
+    }).catch(err => {
+        console.log(err);
+    });
 }
 
 // POST https://www.dagertech.net/cgi-bin/cgiwrap/gershman/sss/index.cgi?app=teaching&goto=sss&school=cal_poly_pomona&course=CS_2600&term=2020_fall&ssscmd=submit&session_id=%sessionID
@@ -214,4 +250,23 @@ function submitAssignment() {
 // returns: 
 function changePassword() {
 
+}
+
+function showStatus(statusPage) {
+    var statusTable = statusPage.window.document.getElementById('sss_status_table');
+    var tableColumns = statusTable.rows[0].cells;
+    var table = {};
+    table.scores = {};
+    for (var i = 1; i < statusTable.rows[1].cells.length; i++) {
+        var score = statusTable.rows[1].cells[i].textContent;
+        if (score !== '')
+            table.scores[tableColumns[i]] = score;
+    }
+
+    if(!Object.keys(table.scores).length) {
+        console.log('No score data, yet.');
+        return;
+    }
+
+    // TODO
 }
